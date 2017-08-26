@@ -172,8 +172,9 @@
         if(!this.setup.x && !this.setup.y) this.setup.center = true;
 
         // Create the new browser window instance, with the passed setup
-        this.object = new BrowserWindow(windowStateKeeper(this.setup));
-        windowStateKeeper.manage(this.object);
+        var state = windowStateKeeper(this.setup);
+        this.object = new BrowserWindow(state);
+        state.manage(this.object);
 
         // Log the action
         console.log('Window "' + this.name + '" was created');

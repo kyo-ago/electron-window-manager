@@ -1,6 +1,6 @@
 {
   "name": "@kyo-ago/electron-window-manager",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A NodeJs module that handles window management for Electron (Atom Shell, previously)",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/azain/electron-window-manager.git"
+    "url": "https://github.com/kyo-ago/electron-window-manager.git"
   },
   "keywords": [
     "electron",
