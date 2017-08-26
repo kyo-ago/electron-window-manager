@@ -15,6 +15,7 @@
     const FileSystem = require('fs');
     const WatchJS = require('melanke-watchjs');
     const Shortcuts = require('electron-localshortcut');
+    const windowStateKeeper = require('electron-window-state');
     const UrlPath = require('url');
     const DirPath = require('path');
     const Handlebars = require('handlebars');
@@ -171,7 +172,8 @@
         if(!this.setup.x && !this.setup.y) this.setup.center = true;
 
         // Create the new browser window instance, with the passed setup
-        this.object = new BrowserWindow(this.setup);
+        this.object = new BrowserWindow(windowStateKeeper(this.setup));
+        windowStateKeeper.manage(this.object);
 
         // Log the action
         console.log('Window "' + this.name + '" was created');
