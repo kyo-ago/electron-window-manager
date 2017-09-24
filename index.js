@@ -18,8 +18,10 @@
     const windowStateKeeper = require('electron-window-state');
     const UrlPath = require('url');
     const DirPath = require('path');
-    const Handlebars = require('handlebars');
-    const _ = require('underscore');
+    let isObject = (obj) => {
+        var type = typeof obj;
+        return type === 'function' || type === 'object' && !!obj;
+    };
 
     /**
      * Creates a new Window instance
@@ -42,7 +44,7 @@
         }
 
         // The window unique name, if omitted a serialized name will be used instead; window_1 ~> window_2 ~> ...
-        this.name = name || ( 'window_' + ( _.keys(windowManager.windows).length + 1 ) );
+        this.name = name || ( 'window_' + ( Object.keys(windowManager.windows).length + 1 ) );
 
         // The BrowserWindow module instance
         this.object = null;
@@ -57,7 +59,7 @@
         if(showDevTools) this.setup.showDevTools = showDevTools;
 
         // If the setup is just the window dimensions, like '500x350'
-        if(_.isString(setup) && setup.indexOf('x') >= 0){
+        if(toString.call(setup) === '[object String]' && setup.indexOf('x') >= 0){
             var dimensions = setup.split('x');
             setup = {
                 'width': parseInt(dimensions[0]),
@@ -66,8 +68,8 @@
         }
 
         // Overwrite the default setup
-        if(_.isObject(setup)){
-            this.setup = _.extend(this.setup, setup);
+        if(isObject(setup)){
+            this.setup = Object.assign(this.setup, setup);
         }
 
         // Register the window on the window manager
@@ -81,8 +83,8 @@
         if(value){
             this.setup[prop] = value;
 
-        }else if(_.isObject(prop)){
-            this.setup = _.extend(this.setup, prop);
+        }else if(isObject(prop)){
+            this.setup = Object.assign(this.setup, prop);
         }
     };
 
@@ -131,7 +133,7 @@
 
             // Merge with this window setup
             if(template){
-                this.setup = _.extend(template, this.setup);
+                this.setup = Object.assign({}, template, this.setup);
 
             }else{
                 console.log('The setup template "' + template + '" wasn\'t found!');
@@ -152,7 +154,7 @@
         // Handle the "position" feature/property
         if(this.setup.position){
             // If an array was passed
-            if(_.isArray(this.setup.position)){
+            if(Array.isArray(this.setup.position)){
                 this.setup.x = this.setup.position[0];
                 this.setup.y = this.setup.position[1];
 
@@ -227,7 +229,7 @@
      * */
     Window.prototype.open = function(url, hide){
         // If the window is already created
-        if(_.isObject(this.object)){
+        if(isObject(this.object)){
             this.focus();
             return false;
         }
@@ -305,8 +307,9 @@
                       "appBase": Application.getAppPath()
                     };
 
-                    var template = Handlebars.compile(content);
-                    var html = template(data);
+                    var html = content.replace(/\{\{(\w+)\}\}/g, (all, name) => {
+                        return data[name] || all;
+                    });
                     var generatedUrl = DirPath.basename(url);
 
                     FileSystem.writeFile('layouts/compiled/' + generatedUrl, html, (error) => {
@@ -527,7 +530,7 @@
         var bounds = this.object.getBounds();
 
         // If a position name was provided
-        if(_.isString(x)){
+        if(toString.call(x) === '[object String]'){
             this.setup.position = x;
             var xy = utils.resolvePosition(this.setup);
 
@@ -575,7 +578,7 @@
          * Set a new template
          * */
         'set': function(name, setup){
-            if(!_.isObject(setup) || this.templates[name]) return false;
+            if(!isObject(setup) || this.templates[name]) return false;
 
             this.templates[name] = setup;
         },
@@ -584,7 +587,7 @@
          * Fetches the setup by name
          * */
         'get': function(name){
-            return _.clone(this.templates[name]);
+            return Object.assign({}, this.templates[name]);
         },
 
         /**
@@ -593,9 +596,9 @@
          * @param setup The new changes, as an object
          * */
         'modify': function(name, setup){
-            if(!_.isObject(setup) || !this.templates[name]) return false;
+            if(!isObject(setup) || !this.templates[name]) return false;
 
-            this.templates[name] = _.extend(this.get(name), setup);
+            this.templates[name] = Object.assign({}, this.get(name), setup);
         },
 
         /**
@@ -841,10 +844,10 @@
          * */
         'init': function(config){
             // If the config object is provided
-            if(_.isObject(config)){
-                this.config = _.extend(this.config, config);
+            if(isObject(config)){
+                this.config = Object.assign({}, this.config, config);
 
-            }else if(_.isString(config)){
+            }else if(toString.call(config) === '[object String]'){
                 this.config.appBase = config;
             }
 
@@ -854,9 +857,9 @@
             }
 
             // If the layouts list was passed in the config
-            if(this.config.layouts && _.isObject(this.config.layouts)){
-                _.each(this.config.layouts, function(path, name){
-                    layouts.add(name, path);
+            if(this.config.layouts && isObject(this.config.layouts)){
+                Object.keys(this.config.layouts).forEach((key) => {
+                    layouts.add(key, this.config.layouts[key]);
                 });
             }
 
@@ -893,7 +896,7 @@
          * @param setup The setup object
          * */
         'setDefaultSetup': function(setup){
-            if(!_.isObject(setup)) return false;
+            if(!isObject(setup)) return false;
 
             // Add the setup template
             templates.set('default', setup);
@@ -907,10 +910,11 @@
          * */
         'importList': function(file){
             var list = require(utils.getAppLocalPath() + file);
-            if(!_.isObject(list)) return false;
+            if(!isObject(list)) return false;
 
-            _.each(list, function(window, name){
-                windowManager.createNew(name, window.title, window.url, window.setupTemplate, window.setup);
+            Object.keys(list).forEach((key) => {
+                let window = list[key];
+                windowManager.createNew(key, window.title, window.url, window.setupTemplate, window.setup);
             });
         },
 
@@ -921,8 +925,7 @@
             // Create the window instance
             var window = new Window(name, title, url, setupTemplate, setup, showDevTools);
 
-            // If the window was created
-            return _.isEmpty(window) ?false :window;
+            return window;
         },
 
         /**
@@ -961,7 +964,8 @@
          */
         getById: function(id) {
             var instance;
-            _.each(this.windows, function(window){
+            Object.key(this.windows).forEach((key) => {
+                let window = this.windows[key];
                 if(window.object.id === id){
                     instance = window;
                 }
@@ -1005,7 +1009,8 @@
          * Close all windows created by this module
          * */
         'closeAll': function(){
-            _.each(this.windows, function(window){
+            Object.key(this.windows).forEach((key) => {
+                let window = this.windows[key];
                 window.close();
             });
         },
@@ -1022,7 +1027,8 @@
             if(!windows.length || !windowID) return false;
 
             // Loop through the windows, close all of them and focus on the targeted one
-            _.each(windows, function(window){
+            Object.key(windows).forEach((key) => {
+                let window = windows[key];
                 if(window.id != windowID){
                     window.close();
                 }
